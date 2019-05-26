@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<canvas id="canvs" width="1000px" height="800px"style="position: relative;left: 200px"> </canvas>
+</body>
+<script>
+    let ctx = document.querySelector("#canvs").getContext("2d");
+    let canvas = document.querySelector("#canvs");
+    let t0 = 0;
+    let paths = [];
+    animateStop = false;
+    let x = 50;
+    let y = 50;
+    let lastx = 0;
+    let lasty = 0;
+    let cx = x;
+    let cy = y;
+    let mousedown = false;
+    let lastmousedown = false;
+    let now = -1;
+    let isin = -1;
+    let count = 0;
+    let cons = [];
+    let cog = [];
+    let co5 = [];
+    let lastnew = true;
+    let times  = 0.3;
+    //let geted = [];
+
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    canvas.addEventListener("mousedown" , function(event){
+
+        let rect = canvas.getBoundingClientRect();
+        x = event.clientX - rect.left * (canvas.width / rect.width);
+        y = event.clientY - rect.top * (canvas.height / rect.height);
+        lastx = x;
+        lasty = y;
+        mousedown = true;
+        isin = -1;
+        let is = paths.some((val,index)=>{
+            if (val.ismouseon())
+            {
+                isin = index;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        });
+
+
+        canvas.addEventListener("mouseup" , muHandle , false);
+        canvas.addEventListener("mousemove" , mmHandle , false);
+        function mmHandle(event){
+            lastx = x;
+            lasty = y;
+            x = event.clientX - rect.left * (canvas.width / rect.width);
+            y = event.clientY - rect.top * (canvas.height / rect.height);
+            if (isin !== -1)
+            {
+                paths[isin].x = x;
+                paths[isin].y = y;
+                paths[isin].newway = true;
+                lastnew = true;
+            }
+        }
+        function muHandle(event){
+            lastx = x;
+            lasty = y;
+            x = event.clientX - rect.left * (canvas.width / rect.width);
+            y = event.clientY - rect.top * (canvas.height / rect.height);
+            mousedown = false;
+            isin = -1;
+            if (!is)
+            {
+                let cr = new point(x,y,10,-1);
+                paths.push(cr);
+            }
+            is = false;
+            canvas.removeEventListener("mouseup" , muHandle , false);
+            canvas.removeEventListener("mousemove" , mmHandle , false);
+        }
+    },false);
+
+
+    function animate(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.save();
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 4;
+
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        let t1 = new Date();
+        let t = (t1 - t0)/1000;
+
+        des();
+        for (let i = 0;i<paths.length-1;i++)
+        {
+            ctx.beginPath();
+            ctx.moveTo(paths[i].x,paths[i].y);
+            ctx.lineTo(paths[i+1].x,paths[i+1].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+
+
+        user_draw();
+
+
+
+        t0 = t1;
+        if(!animateStop){
+            draw(()=>animate());
+        }
+    }
+    function des()
+    {
+        if (lastnew)
+        {
+            cons = [];
+            cog = [];
+            co5 = [];
+            //ctx.save();
+            for (let i = 0;i<paths.length-1;i++)
+            {
+                let nx = -(paths[i].x - paths[i+1].x) * times + paths[i].x;
+                let ny = -(paths[i].y - paths[i+1].y) * times + paths[i].y;
+
+
+                let pis = new point(nx,ny,8,-1,"black","red",-1);
+                cons.push(pis);
+             //   ctx.restore();
+            }
+            for (let i = 0;i<cons.length-1;i++)
+            {
+                let nx = -(cons[i].x - cons[i+1].x) * times + cons[i].x;
+                let ny = -(cons[i].y - cons[i+1].y) * times + cons[i].y;
+                let pis = new point(nx,ny,8,-1,"black","blue",-1);
+                cog.push(pis);
+                //   ctx.restore();
+            }
+            for (let i = 0;i<cog.length-1;i++)
+            {
+                let nx = -(cog[i].x - cog[i+1].x) * times + cog[i].x;
+                let ny = -(cog[i].y - cog[i+1].y) * times + cog[i].y;
+                let pis = new point(nx,ny,8,-1,"black","yellow",-1);
+                co5.push(pis);
+                //   ctx.restore();
+            }
+            lastnew = false;
+        }
+        for (let i = 0;i<cons.length-1;i++)
+        {
+            ctx.beginPath();
+            ctx.moveTo(cons[i].x,cons[i].y);
+            ctx.lineTo(cons[i+1].x,cons[i+1].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+        for (let i = 0;i<cog.length-1;i++)
+        {
+            ctx.beginPath();
+            ctx.moveTo(cog[i].x,cog[i].y);
+            ctx.lineTo(cog[i+1].x,cog[i+1].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+        for (let i = 0;i<co5.length-1;i++)
+        {
+            ctx.beginPath();
+            ctx.moveTo(co5[i].x,co5[i].y);
+            ctx.lineTo(co5[i+1].x,co5[i+1].y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+    }
+
+    function user_draw()
+    {
+        //ctx.strokeStyle = "orange";
+        //ctx.lineWidth = 2;
+        paths.forEach((val)=>{
+            val.paint();
+        });
+        cons.forEach((val)=>{
+            val.paint();
+        });
+        cog.forEach((val)=>{
+            val.paint();
+        });
+        co5.forEach((val)=>{
+            val.paint();
+        });
+    }
+
+    class point{
+
+        constructor(x,y,raidus,type,strokestyle = "black",fillstyle = "pink",linenumber = -1)
+        {
+            this.x = x;
+            this.y = y;
+            this.type = type;
+            this.raidus = raidus;
+            this.fillstyle = fillstyle;
+            this.strokestyle = strokestyle;
+            this.linenumber = linenumber;
+            this.newway = false;
+            this.ctx = ctx;
+            this.pis = new Path2D();
+            this.pis.arc(x, y, raidus, 0, Math.PI*2, true);
+            lastnew = true;
+        }
+        paint()
+        {
+            this.ctx.save();
+            this.ctx.fillStyle = this.fillstyle;
+            this.ctx.strokeStyle = this.strokestyle;
+            if (this.newway)
+            {
+                this.pis = new Path2D();
+                //   this.pis.beginPath();
+                this.pis.arc(this.x, this.y, this.raidus, 0, Math.PI*2, true);
+                //   this.pis.closePath();
+                this.newway = false;
+            }
+            this.ctx.fill(this.pis);
+            this.ctx.stroke(this.pis);
+            this.ctx.restore();
+        }
+        ismouseon()
+        {
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+        isonxy(x,y)
+        {
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+    }
+
+
+    let cr = new point(150,150,10,-1);
+    paths.push(cr);
+    let en = new point(300,300,10,-1);
+    paths.push(en);
+
+
+
+
+    animate();
+
+
+
+
+    function draw(ani,seto = false)
+    {
+        if (seto)
+        {
+            setTimeout(ani , 2);
+        }
+        else
+        {
+            if("requestAnimationFrame" in window){
+                requestAnimationFrame(ani);
+            }
+            else if("webkitRequestAnimationFrame" in window){
+                webkitRequestAnimationFrame(ani);
+            }
+            else if("msRequestAnimationFrame" in window){
+                msRequestAnimationFrame(ani);
+            }
+            else if("mozRequestAnimationFrame" in window){
+                mozRequestAnimationFrame(ani);
+            }
+            else {
+                setTimeout(ani , 10);
+            }
+        }
+    }
+
+</script>
+</html>

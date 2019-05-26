@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<canvas id="canvs" width="1000px" height="800px"style="position: relative;left: 200px"> </canvas>
+</body>
+<script>
+    let ctx = document.querySelector("#canvs").getContext("2d");
+    let canvas = document.querySelector("#canvs");
+    let t0 = 0;
+    let paths = [];
+    animateStop = false;
+    let x = 50;
+    let y = 50;
+    let lastx = 0;
+    let lasty = 0;
+    let cx = x;
+    let cy = y;
+    let mousedown = false;
+    let lastmousedown = false;
+    let now = -1;
+    let isin = -1;
+    let count = 0;
+    //let geted = [];
+
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    canvas.addEventListener("mousedown" , function(event){
+
+        let rect = canvas.getBoundingClientRect();
+        x = event.clientX - rect.left * (canvas.width / rect.width);
+        y = event.clientY - rect.top * (canvas.height / rect.height);
+        lastx = x;
+        lasty = y;
+        mousedown = true;
+        isin = -1;
+        let is = paths.some((val,index)=>{
+           if (val.ismouseon())
+           {
+               isin = index;
+               return true;
+           }
+           else
+           {
+               return false;
+           }
+        });
+
+
+        // canvas.addEventListener("focus",()=>console.log("focus"),false);
+        // canvas.addEventListener("blur",()=>console.log("blur"),false);
+
+        canvas.addEventListener("mouseup" , muHandle , false);
+        canvas.addEventListener("mousemove" , mmHandle , false);
+        // window.addEventListener("mousemove" , ()=>mousedown = false , false);
+        function mmHandle(event){
+            lastx = x;
+            lasty = y;
+            x = event.clientX - rect.left * (canvas.width / rect.width);
+            y = event.clientY - rect.top * (canvas.height / rect.height);
+           /* if (ctx.isPointInPath(cric,x,y))
+            {*/
+           if (isin !== -1)
+           {
+               paths[isin].x = x;
+               paths[isin].y = y;
+               paths[isin].newway = true;
+           }
+           // des();
+          //  }
+           // line.lineTo(x,y);
+        }
+        function muHandle(event){
+            lastx = x;
+            lasty = y;
+            x = event.clientX - rect.left * (canvas.width / rect.width);
+            y = event.clientY - rect.top * (canvas.height / rect.height);
+            mousedown = false;
+            isin = -1;
+            if (!is)
+            {
+                let cr = new point(x,y,10,-1);
+                paths.push(cr);
+            }
+            is = false;
+            canvas.removeEventListener("mouseup" , muHandle , false);
+            canvas.removeEventListener("mousemove" , mmHandle , false);
+        }
+    },false);
+
+
+    function animate(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.save();
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 4;
+
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        let t1 = new Date();
+        let t = (t1 - t0)/1000;
+
+        des();
+
+       // ctx.arc(cx, cy, 20, 0, Math.PI*2, true);
+       // ctx.stroke(cric);
+/*
+        cric = new Path2D();
+        cric.arc(cx, cy, 20, 0, Math.PI*2, true);
+        ctx.stroke(cric);*/
+
+        user_draw();
+
+
+
+        t0 = t1;
+        if(!animateStop){
+            draw(()=>animate());
+        }
+    }
+    function des()
+    {
+        count = 0;
+        if (isin !== -1) {
+            let go = -1;
+            let is = paths.some((value, index) => {
+                if (index !== isin) {
+                    if (compare(value,paths[isin]))
+                    {
+                        go = index;
+                        console.log(go);
+                        return true;
+                    }
+                }
+                return false;
+                //  paths.reverse();
+            });
+           // exc(value,isin);
+           console.log(is);
+            if (is) {
+                exc(paths[go], paths[isin]);
+                reisc();
+            }
+        }
+
+    }
+
+    function  compare(a,b)
+    {
+        return Math.ceil(Math.sqrt(Math.pow(a.x - b.x,2) + Math.pow(a.y -b.y,2))) < a.raidus + b.raidus ;
+    }
+    function exc(a,b)
+    {
+            let xs = Math.sqrt(Math.pow(a.raidus + b.raidus, 2) - Math.pow(a.y - b.y, 2));
+            let ax = Math.abs(xs - a.x);
+            let bx = Math.abs(xs + a.x);
+            b.x = ax;
+          //  b.y = a.y;
+            b.x = Math.abs(x - ax) > Math.abs(bx - x) ? bx : ax;
+            //console.log(b.x);
+    }
+    function reisc()
+    {
+        let go = -1;
+        let is = paths.some((val,index)=>{
+            if (isin !== index)
+            {
+                if (compare(val,paths[isin]))
+                {
+                    go = index;
+                    console.log(go);
+                    return true;
+                }
+            }
+            return false;
+        });
+        if (is)
+        {
+            exc(paths[go], paths[isin]);
+            count ++;
+            if (count >=100)
+            return ;
+            reisc();
+        }
+    }
+
+
+
+    function user_draw()
+    {
+        //ctx.strokeStyle = "orange";
+        //ctx.lineWidth = 2;
+        paths.forEach((val)=>{
+            val.paint();
+    })
+    }
+
+    class point{
+
+        constructor(x,y,raidus,type,strokestyle = "black",fillstyle = "pink",linenumber = -1)
+        {
+            this.x = x;
+            this.y = y;
+            this.type = type;
+            this.raidus = raidus;
+            this.fillstyle = fillstyle;
+            this.strokestyle = strokestyle;
+            this.linenumber = linenumber;
+            this.newway = false;
+            this.ctx = ctx;
+            this.pis = new Path2D();
+            //this.pis.beginPath();
+            this.pis.arc(x, y, raidus, 0, Math.PI*2, true);
+            // this.pis.closePath();
+        }
+        paint()
+        {
+            this.ctx.save();
+            this.ctx.fillStyle = this.fillstyle;
+            this.ctx.strokeStyle = this.strokestyle;
+            if (this.newway)
+            {
+                this.pis = new Path2D();
+                //   this.pis.beginPath();
+                this.pis.arc(this.x, this.y, this.raidus, 0, Math.PI*2, true);
+                //   this.pis.closePath();
+                this.newway = false;
+            }
+            this.ctx.fill(this.pis);
+            this.ctx.stroke(this.pis);
+            this.ctx.restore();
+        }
+        ismouseon()
+        {
+            //console.log(this.ctx.isPointInPath(this.pis,x,y));
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+        isonxy(x,y)
+        {
+            //console.log(this.ctx.isPointInPath(this.pis,x,y));
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+        getx()
+        {
+            return this.x;
+        }
+        gety()
+        {
+            return this.y;
+        }
+    }
+
+
+
+    let cr = new point(150,150,10,-1);
+    paths.push(cr);
+    let en = new point(300,300,10,-1);
+    paths.push(en);
+
+
+    animate();
+
+
+
+
+/*
+    class line{
+
+
+        constructor(x,y,width,strokestyle = "black",linenumber = -1)
+        {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.strokestyle = strokestyle;
+            this.linenumber = linenumber;
+            this.newway = false;
+            this.ctx = ctx;
+            this.pis = new Path2D();
+            //this.pis.beginPath();
+            this.pis.lineTo(this.x, this.y);
+            // this.pis.closePath();
+        }
+        paint()
+        {
+            this.ctx.save();
+            this.ctx.fillStyle = this.fillstyle;
+            this.ctx.strokeStyle = this.strokestyle;
+            if (this.newway)
+            {
+                this.pis = new Path2D();
+                //   this.pis.beginPath();
+                this.pis.lineTo(this.x, this.y);
+                //   this.pis.closePath();
+                this.newway = false;
+            }
+            this.ctx.fill(this.pis);
+            this.ctx.stroke(this.pis);
+            this.ctx.restore();
+        }
+        ismouseon()
+        {
+            //console.log(this.ctx.isPointInPath(this.pis,x,y));
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+        isonxy(x,y)
+        {
+            //console.log(this.ctx.isPointInPath(this.pis,x,y));
+            return this.ctx.isPointInPath(this.pis,x,y);
+        }
+        getx()
+        {
+            return this.x;
+        }
+        gety()
+        {
+            return this.y;
+        }
+    }
+*/
+
+
+
+    function draw(ani,seto = false)
+    {
+        if (seto)
+        {
+            setTimeout(ani , 2);
+        }
+        else
+        {
+            if("requestAnimationFrame" in window){
+                requestAnimationFrame(ani);
+            }
+            else if("webkitRequestAnimationFrame" in window){
+                webkitRequestAnimationFrame(ani);
+            }
+            else if("msRequestAnimationFrame" in window){
+                msRequestAnimationFrame(ani);
+            }
+            else if("mozRequestAnimationFrame" in window){
+                mozRequestAnimationFrame(ani);
+            }
+            else {
+                setTimeout(ani , 10);
+            }
+        }
+    }
+
+</script>
+</html>
