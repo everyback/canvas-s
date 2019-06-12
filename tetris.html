@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<canvas id="canvs" width="300" height="600"style="position: relative;left: 200px"> </canvas>
+<br />
+<button  onclick="init()"  > go </button>
+</body>
+<script>
+    let ctx = document.querySelector("#canvs").getContext("2d");
+    let canvas = document.querySelector("#canvs");
+
+    let mousein = [-1,-1];//第一个表示组名，第二个表示序列名
+    let gameover = false;
+    let gamestart = false;
+    let animateStop = false;
+    let blocksize = 25;
+    let showblocks = [];
+    let dropBlock = false;
+    let nowBlock = {};
+    let blockxlength = 6;
+    let blockylength = 7;
+    let blockAt = 0;
+    let timeStart = 0 ;
+    let lastTime = 0;
+    let width = 0;
+    let height = 0;
+    let droptime = 1000;
+    let nownumber = 0;
+    let nowfont = 0;
+    let hold = -1;
+    let empt = true;
+    let exchanged = false;
+    let shadowAt = {};
+    let blocktypes = [//顺时针
+
+        {
+            0:[-2,0,-1,0,0,0,1,0,"Aquamarine"], //水蓝色一字
+            1:[0,-2,0,-1,0,0,0,1,"Aquamarine"],
+            2:[-2,0,-1,0,0,0,1,0,"Aquamarine"],
+            3:[0,-2,0,-1,0,0,0,1,"Aquamarine"],
+            color:"Aquamarine",
+        },
+
+        {
+            0:[-2,0,-1,0,0,0,0,-1,"yellow"],//黄色倒L
+            1:[0,-2,0,-1,0,0,1,0,"yellow"],
+            2:[-1,1,-1,0,0,0,1,0,"yellow"],
+            3:[-1,0,0,0,0,1,0,2,"yellow"],
+            color:"yellow",
+        },
+
+        {
+            0:[-1,-1,-1,0,0,0,1,0,"blue"],//蓝色反倒L,
+            1:[0,-1,1,-1,0,0,0,1,"blue"],
+            2:[-2,0,-1,0,0,0,0,1,"blue"],
+            3:[0,-2,0,-1,0,0,-1,0,"blue"],
+            color:"blue",
+        },
+
+        {
+            0:[-1,0,0,0,0,-1,1,0,"purple"],//紫色 半加号
+            1:[0,-1,0,0,1,0,0,1,"purple"],
+            2:[-1,0,0,0,0,1,1,0,"purple"],
+            3:[0,-1,0,0,-1,0,0,1,"purple"],
+            color:"purple",
+        },
+
+        {
+            0:[0,0,0,1,1,0,1,1,"Gold"],//金黄 田字
+            1:[0,0,0,1,1,0,1,1,"Gold"],
+            2:[0,0,0,1,1,0,1,1,"Gold"],
+            3:[0,0,0,1,1,0,1,1,"Gold"],
+            color:"Gold",
+        },
+
+        {
+            0:[-1,-1,-1,0,0,0,0,1,"Chartreuse"],       //s
+            1:[-1,0,0,0,0,-1,1,-1,"Chartreuse"],
+            2:[-1,-1,-1,0,0,0,0,1,"Chartreuse"],
+            3:[-1,0,0,0,0,-1,1,-1,"Chartreuse"],
+            color:"Chartreuse",
+        },
+
+        {
+            0:[0,-1,0,0,-1,0,-1,1,"red"],       //反s
+            1:[-1,-1,0,-1,0,0,1,0,"red"],
+            2:[0,-1,0,0,-1,0,-1,1,"red"],
+            3:[-1,-1,0,-1,0,0,1,0,"red"],
+
+            color :"red",
+        },
+
+
+    ];
+
+    let blockdownspeed = 1;
+    let keypool = [];
+
+
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+    canvas.addEventListener("mousedown" , function(event){
+
+        let rect = canvas.getBoundingClientRect();
+        x = event.clientX - rect.left * (canvas.width / rect.width);
+        y = event.clientY - rect.top * (canvas.height / rect.height);
+
+        if (animateStop ===true)
+        {
+            animateStop = false;
+            animate();
+        }
+
+
+        window.addEventListener("keydown" , keyDownHandle , false);
+        window.addEventListener("keyup" , keyUpHandle , false);
+        console.log("done");
+
+        window.addEventListener("mousedown" , windows , false);
+
+
+    },false);
+
+
+    function animate(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.save();
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 1;
+
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+
+        des();
+        user_draw();
+
+        if(!animateStop /*&& !gameover*/){
+            draw(()=>animate());
+        }
+    }
+    function des()
+    {
+        if (!dropBlock)
+        {
+            if (Object.keys(nowBlock).length === 0 && gameover === false)
+            {
+                nownumber = Math.floor(Math.random() * 7 );
+              //  nownumber = 2;
+                nowfont = 0;
+                nowBlock = blocktypes[nownumber][nowfont];//分配块坠落
+                dropBlock = true;
+                if (checkend())
+                {
+                    console.log("gameover");
+                    gameover = true;
+                }
+                if (exchanged && !empt)
+                {
+                    exchanged = false;
+                }
+                else
+                {
+                    empt = false;
+                }
+            }
+
+        }
+
+            let x = 0;
+            let y = 1;
+            //if ()
+            while (x <= blockxlength && y <= blockylength)//不管怎么样，先清除当前快
+            {
+                let gx = blockAt.x+nowBlock[x];
+                let gy = blockAt.y+nowBlock[y];
+                if (gx >=0 && gy>=0)
+                {
+                    showblocks[gy][gx] = 0;
+                }
+                x += 2;
+                y += 2;
+
+            }
+            let flag = checkend();
+
+            if (!flag )// 没到底
+            {
+                keyevent();
+                dropBlock = true;
+                if (Date.now()- lastTime >= droptime && !gameover ) {
+                    lastTime = Date.now();
+                    blockAt.y ++;
+                }
+
+                x = 0;
+                y = 1;
+                shadowAt = {
+                    x:blockAt.x,
+                    y:blockAt.y ,
+                };
+                //shadowend();
+                while (!checkend(shadowAt))
+                {
+                    shadowAt.y ++;
+                }
+                /*while(!checkend(shadowAt))
+                {
+                    shadowAt.y ++;
+                }*/
+               // shadowAt = {y:blockAt.y+5,x:blockAt.x};
+                while (x <= blockxlength && y <= blockylength)//循环设定块
+                {
+                    let gx = blockAt.x+nowBlock[x];
+                    let gy = blockAt.y+nowBlock[y];
+                    if (gx >=0 && gy>=0)
+                    {
+                        showblocks[gy][gx] = new block(nowBlock[x],nowBlock[y],nowBlock[8]);
+                    }
+                    x += 2;
+                    y += 2;
+                }
+
+            }
+            else
+            {
+                dropBlock = false;//停止掉落 并锁定块
+                x = 0;
+                y = 1;
+                while (x <= blockxlength && y <= blockylength)//循环设定块
+                {
+                    let gx = blockAt.x+nowBlock[x];
+                    let gy = blockAt.y+nowBlock[y];
+                    if (gx >=0 && gy>=0)
+                    {
+                        showblocks[blockAt.y+nowBlock[y]][blockAt.x+nowBlock[x]] = new block(nowBlock[x],nowBlock[y],nowBlock[8],"black",true);
+                    }
+                    x += 2;
+                    y += 2;
+                }
+
+                blockAt = {x:Math.floor(width/2),y:-1};
+                shadowAt = {x:blockAt.x,y:-1};
+                getline();
+                nowBlock = {};
+            }
+          //  droptime = 1000;
+    }
+
+    function user_draw()
+    {
+        let x = 0;
+        let y = 1;
+        while (x <= blockxlength && y <= blockylength)
+        {
+
+            let gy = shadowAt.y + nowBlock[y];
+            let gx = shadowAt.x + nowBlock[x];
+            if (gx >=0 && gy>=0)
+            {
+                ctx.save();
+                ctx.fillStyle = "#F0F0F0";
+                ctx.strokeStyle = nowBlock[8];
+                ctx.fillRect(gx * blocksize,gy * blocksize,blocksize,blocksize);
+                ctx.strokeRect(gx * blocksize,gy * blocksize,blocksize,blocksize);
+                ctx.restore();
+            }
+            x += 2;
+            y += 2;
+        }
+        showblocks.forEach((items,y )=>{
+            items.forEach( (val,x )=>{
+               if (typeof val === "object")
+               {
+                    //val.paint(x,y);
+                   ctx.save();
+                   ctx.fillStyle = val.fillstyle;
+                   ctx.strokeStyle = val.strokestyle;
+                   ctx.fillRect(x * blocksize,y * blocksize,blocksize,blocksize);
+                   ctx.strokeRect(x * blocksize,y * blocksize,blocksize,blocksize);
+                   ctx.restore();
+               }
+            });
+        });
+
+    }
+
+
+    function init()
+    {
+        gamestart = true;
+        width = Math.floor(canvas.width/blocksize);
+        height = Math.floor(canvas.height/blocksize);
+        blockAt = {x:Math.floor(width/2),y:-1};
+        timeStart = Date.now();
+        lastTime = timeStart+1000;
+        dropBlock = false;
+        gameover = false;
+        nownumber = 0;
+        nowfont = 0;
+        hold = -1;
+        empt = true;
+        exchanged = false;
+        showblocks = Array.from({length:height},v => Array.from({length:width},v => 0 ));//计算列出二维的区块数组
+
+        animate();
+    }
+
+    function checkend( at = [])
+    {
+        at =  at instanceof Array ? blockAt:at;
+       // console.log(at === shadowAt);
+        if (at.y >= showblocks.length)
+        {
+            // console.log("boom");
+            return true;
+        }
+        let x = 0;
+        let y = 1;
+        if (y <= 0)
+        {
+            return false;
+        }
+        while (x <= blockxlength && y <= blockylength)
+        {
+            if (at.y+nowBlock[y]+1 >showblocks.length -1 )
+                return true;
+            try{
+
+                if (showblocks[at.y+nowBlock[y]+1][at.x+nowBlock[x]] === 0)
+                {
+                    x += 2;
+                    y += 2;
+                }
+                else
+                {
+                    return true;
+                }
+            }catch (e)
+            {
+                return at.y+nowBlock[y]+1 < -1
+            }
+
+        }
+        return false;
+    }
+
+    function shadowend()
+    {
+        let at =  shadowAt;
+        // console.log(at === shadowAt);
+        let x = 0;
+        let y = 1;
+        if (y <= 0)
+        {
+            return false;
+        }
+        //shadowAt.y = showblocks.length - 1;
+        let flag = false;
+        while(shadowAt.y <showblocks.length)
+        {
+            //console.log(shadowAt.y);
+            while (x <= blockxlength && y <= blockylength)
+            {
+
+                let gx = at.x+nowBlock[x];
+                let gy = at.y+nowBlock[y];
+               try{
+
+                    if (showblocks[gy][gx] === 0)
+                    {
+                        x += 2;
+                        y += 2;
+                    }
+                    else
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+                catch (e)
+                {
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag)
+            {
+                break;
+            }
+            else
+            {
+                shadowAt.y ++ ;
+                flag = false;
+            }
+
+        }
+        shadowAt.y -- ;
+        return false;
+    }
+
+    function getline()
+    {
+        let lines = 0;
+        showblocks = showblocks.filter((items)=>{
+
+             let g = items.every((val)=>{
+                return val instanceof Object;
+            });
+             if (g)
+             {
+                 lines ++;
+                 return false;
+             }
+             return true;
+        });
+        if (lines !== 0)
+        {
+            let newarr =  Array.from({length:lines},v => Array.from({length:width},v => 0));
+            showblocks.unshift(...newarr);
+            showblocks.forEach(items =>{
+                items.forEach( val=>{
+                    if (typeof val === "object")
+                    {
+
+                       /* val.y = val.y + lines;
+                        val.savey = val.savey + lines ;*/
+                    }
+                });
+            })
+        }
+
+
+    }
+
+
+    function keyevent()
+    {
+        let leftend = false;
+        let rightend = false;
+        while(keypool.length > 0)
+        {
+            let key = keypool.pop();
+            if (key.event === "up")
+            {
+                switch (key.code )
+                {
+                    case 16 ://space
+                        // keypool.push({code:32,key:"space",event:"down"});
+                    {
+                        if (!exchanged)
+                        {
+                            console.log("go");
+                            if (hold === -1)
+                            {
+                                hold = nownumber;
+                                nowBlock = {};
+                            }
+                            else
+                            {
+                                let temp = nownumber;
+                                nownumber = hold;
+                                hold = temp;
+                                nowBlock = blocktypes[nownumber][0];
+                                empt = false;
+                            }
+                            blockAt = {x:Math.floor(width/2),y:-1};
+                            dropBlock = false;
+                            exchanged = true;
+                        }
+                    }
+                        break;
+                    case 32 ://space
+                       // keypool.push({code:32,key:"space",event:"down"});
+                    {
+                        while (!checkend())
+                        {
+                            blockAt.y ++;
+                        }
+                    }
+                        break;
+                    case 37 :{
+                        if (!leftend )
+                        {
+                            if ( !doubleend("L"))
+                            {
+                                blockAt.x -= 1;
+                                leftend = true;
+                            }
+
+                        }
+
+                    }//Left
+                      //  keypool.push({code:37,key:"left",event:"down"});
+                        break;
+                    case 38 ://Up
+                    {
+                        nowfont = nowfont + 1 <4 ? nowfont + 1:0;
+                        nowBlock = blocktypes[nownumber][nowfont + 1 <4 ? nowfont + 1:0];
+                        leftend = false;
+                        rightend = false;
+                    }
+                        break;
+                    case 39 ://Right
+                    {
+                        //console.log(doubleend("R"));
+                        if (!rightend )
+                        {
+                            if (!doubleend("R"))
+                            {
+
+                                blockAt.x += 1;
+                                rightend = true;
+                            }
+
+                        }
+                    }
+                        break;
+                    case 40 ://Down
+                    {
+                        droptime = 1000;
+                    }
+                        break;
+                    case 88 ://x
+                    {
+                        let temp = nowfont;
+                        nowfont = nowfont - 1 >= 0 ? nowfont - 1:3;
+                        nowBlock = blocktypes[nownumber][nowfont];
+                        if (checkend())
+                        {
+                            nowfont = temp;
+                            nowBlock = blocktypes[nownumber][nowfont];
+                        }
+                        leftend = false;
+                        rightend = false;
+                    }
+                        break;
+                    case 90 ://z
+                    {
+                        let temp = nowfont;
+                        nowfont = nowfont + 1 <4 ? nowfont + 1:0;
+                        nowBlock = blocktypes[nownumber][nowfont];
+                        if (checkend())
+                        {
+                            nowfont = temp;
+                            nowBlock = blocktypes[nownumber][nowfont];
+                        }
+                        leftend = false;
+                        rightend = false;
+                    }
+                        break;
+                }
+
+            }
+            if (key.event === "down")
+            {
+                switch (key.code )
+                {
+                   /* case 32 ://space
+                        // keypool.push({code:32,key:"space",event:"down"});
+                        break;
+                    case 37 :{
+                        blockAt.x -= 1;
+                    }//Left
+                        //  keypool.push({code:37,key:"left",event:"down"});
+                        break;
+                    case 38 ://Up
+                        nowBlock = blocktypes[nownumber][nowfont + 1 <4 ? nowfont + 1:0];
+                        break;
+                    case 39 ://Right
+                    {
+                        blockAt.x += 1;
+                    }
+                        break;*/
+                    case 40 ://Down
+                    {
+                        droptime = 100;
+                    }
+                        break;
+                    /*case 88 ://x
+                    {
+                        nowfont = nowfont - 1 >0 ? nowfont - 1:3;
+                        nowBlock = blocktypes[nownumber][nowfont];
+                    }
+                        break;
+                    case 90 ://z
+                    {
+                        nowfont = nowfont + 1 <4 ? nowfont + 1:0;
+                        nowBlock = blocktypes[nownumber][nowfont + 1 <4 ? nowfont + 1:0];
+                    }
+                        break;*/
+                }
+
+            }
+
+
+        }
+    }
+
+    function doubleend(w)
+    {
+        let to = -1;
+        if (w === "R")
+        {
+            to = 1;
+        }
+
+        if (blockAt.x + to >= showblocks.length - 1 || blockAt.x + to  < 0)
+        {
+            return true;
+        }
+        let x = 0;
+        let y = 1;
+        while (x <= blockxlength && y <= blockylength)
+        {
+            try{
+                if (showblocks[blockAt.y+nowBlock[y]][blockAt.x+nowBlock[x] + to] === 0)
+                {
+                    x += 2;
+                    y += 2;
+                }
+                else
+                {
+                    console.log("ret");
+                    return true;
+                }
+            }catch (e)
+            {
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+
+    function draw(ani,seto = false)
+    {
+        if (seto)
+        {
+            setTimeout(ani , 2);
+        }
+        else
+        {
+            if("requestAnimationFrame" in window){
+                requestAnimationFrame(ani);
+            }
+            else if("webkitRequestAnimationFrame" in window){
+                webkitRequestAnimationFrame(ani);
+            }
+            else if("msRequestAnimationFrame" in window){
+                msRequestAnimationFrame(ani);
+            }
+            else if("mozRequestAnimationFrame" in window){
+                mozRequestAnimationFrame(ani);
+            }
+            else {
+                setTimeout(ani , 10);
+            }
+        }
+    }
+
+    class block{
+
+        constructor(x,y,fillstyle = "pink",strokestyle = "black",end = false)
+        {
+            this.x = x;
+            this.y = y;
+            this.fillstyle = fillstyle;
+            this.strokestyle = strokestyle;
+            this.newway = false;
+            this.ctx = ctx;
+            this.pis = new Path2D();
+            this.pis.rect(x*blocksize + blockAt.x*blocksize, y*blocksize + blockAt.y * blocksize,blocksize,blocksize );
+            this.lastx = x;
+            this.lasty = y;
+            this.end = false;
+            this.savex = 0;
+            this.savey = 0;
+        }
+        paint(x = -1, y = -1)
+        {
+            x = x  === -1 ? this.x:x;
+            y = y  === -1 ? this.y:y;
+            this.ctx.save();
+            this.ctx.fillStyle = this.fillstyle;
+            this.ctx.strokeStyle = this.strokestyle;
+            if ((this.lastx !== this.x || this.lasty !== this.y) && this.end === false)
+            {
+                this.pis = new Path2D();
+
+                this.pis.rect(x*blocksize + blockAt.x*blocksize, y*blocksize + blockAt.y * blocksize,blocksize,blocksize );
+                this.savex = x + blockAt.x;
+                this.savey = y + blockAt.y;
+                this.lastx = this.x;
+                this.lasty = this.y;
+            }
+            if (this.end)
+            {
+                this.savex = x ;
+                this.savey = y ;
+                this.pis.rect(this.savex*blocksize, this.savey*blocksize,blocksize,blocksize );
+
+            }
+            this.ctx.fill(this.pis);
+            this.ctx.stroke(this.pis);
+            this.ctx.restore();
+        }
+    }
+    function keyDownHandle(event){
+        // console.log(event);
+        switch (event && event.keyCode){
+            case 16 ://space
+                keypool.push({code:16,key:"shift",event:"down"});
+                break;
+            case 32 ://space
+                keypool.push({code:32,key:"space",event:"down"});
+                break;
+            case 37 ://Left
+                keypool.push({code:37,key:"left",event:"down"});
+                break;
+            case 38 ://Up
+                keypool.push({code:38,key:"up",event:"down"});
+                break;
+            case 39 ://Right
+                keypool.push({code:39,key:"right",event:"down"});
+                break;
+            case 40 ://Down
+                keypool.push({code:40,key:"down",event:"down"});
+                break;
+            case 88 ://z
+                keypool.push({code:88,key:"x",event:"down"});
+                break;
+            case 90 ://z
+                keypool.push({code:90,key:"z",event:"down"});
+                break;
+        }
+
+    }
+
+    function keyUpHandle(event){
+        switch (event && event.keyCode){
+            case 16 ://space
+                keypool.push({code:16,key:"shift",event:"up"});
+                break;
+            case 32 ://space
+                keypool.push({code:32,key:"space",event:"up"});
+                break;
+            case 37 ://Left
+                keypool.push({code:37,key:"left",event:"up"});
+                break;
+            case 38 ://Up
+                keypool.push({code:38,key:"up",event:"up"});
+                break;
+            case 39 ://Right
+                keypool.push({code:39,key:"right",event:"up"});
+                break;
+            case 40 ://Down
+                keypool.push({code:40,key:"down",event:"up"});
+                break;
+            case 88 ://x
+                keypool.push({code:88,key:"x",event:"up"});
+                break;
+            case 90 ://z
+                keypool.push({code:90,key:"z",event:"up"});
+                break;
+
+        }
+    }
+    function windows(event){
+        //console.log(event);
+        if (event.target.localName === "body")
+        {
+            window.removeEventListener("keydown" , keyDownHandle , false);
+            window.removeEventListener("keyup" , keyUpHandle , false);
+            window.removeEventListener("mousedown" , windows , false);
+        }
+
+
+
+    }
+
+</script>
+</html>
